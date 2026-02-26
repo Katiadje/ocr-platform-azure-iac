@@ -1,0 +1,22 @@
+Set-Content .gitignore "# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfplan
+tfplan*
+*.tfstate
+*.tfstate.backup
+crash.log
+
+# variables avec secrets
+*.tfvars.local
+secrets.tfvars
+
+# Python
+__pycache__/
+*.py[cod]
+.env
+venv/
+
+# OS
+.DS_Store
+Thumbs.db"

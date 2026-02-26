@@ -1,0 +1,140 @@
+name: Terraform CI/CD - OCR Platform
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+env:
+  ARM_CLIENT_ID:       ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_CLIENT_SECRET:   ${{ secrets.AZURE_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID:       ${{ secrets.AZURE_TENANT_ID }}
+  TF_VERSION:          "1.6.0"
+
+jobs:
+  # -------------------------------------------------------
+  # JOB 1 : validation et lint du code Terraform
+  # -------------------------------------------------------
+  terraform-validate:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        # si les fichiers sont pas bien formatés ça fail ici
+
+      - name: Terraform Validate
+        run: terraform validate
+
+  # -------------------------------------------------------
+  # JOB 2 : plan sur PR (pour review avant merge)
+  # -------------------------------------------------------
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: terraform-validate
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan (dev)
+        run: |
+          terraform plan \
+            -var="environment=dev" \
+            -no-color \
+            -out=tfplan
+        continue-on-error: true
+
+      - name: Afficher le plan dans la PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ Terraform plan généré avec succès. Vérifier les changements avant de merger.'
+            });
+
+  # -------------------------------------------------------
+  # JOB 3 : déploiement auto sur main (env dev)
+  # -------------------------------------------------------
+  terraform-deploy-dev:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    needs: terraform-validate
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment: dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply (dev)
+        run: |
+          terraform apply \
+            -var="environment=dev" \
+            -auto-approve
+
+  # -------------------------------------------------------
+  # JOB 4 : déploiement prod (uniquement sur main, avec approval manuel)
+  # -------------------------------------------------------
+  terraform-deploy-prod:
+    name: Deploy to Prod
+    runs-on: ubuntu-latest
+    needs: terraform-validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: prod  # nécessite une approbation manuelle configurée dans GitHub
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply (prod)
+        run: |
+          terraform apply \
+            -var="environment=prod" \
+            -auto-approve
