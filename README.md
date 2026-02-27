@@ -331,3 +331,9 @@ Secrets GitHub nécessaires :
 | App Service Plan | asp-ocr-dev-cgh64f |
 | Log Analytics | log-ocr-dev-cgh64f |
 | Application Insights | appi-ocr-dev-cgh64f |
+
+---
+
+## Auteurs
+
+Projet réalisé dans le cadre du cours **Infrastructure as Code & IA** - M2 Développement & Data  
