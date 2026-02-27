@@ -29,3 +29,8 @@ variable "app_insights_key" {
 }
 
 variable "subnet_id" { type = string }
+
+variable "vision_api_key" {
+  type      = string
+  sensitive = true
+}

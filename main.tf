@@ -124,6 +124,7 @@ module "compute" {
   results_container_name         = module.storage.results_container_name
   vision_endpoint                = module.cognitive_service.vision_endpoint
   vision_key_secret_id           = module.cognitive_service.vision_key_secret_id
+  vision_api_key                 = module.cognitive_service.vision_api_key
   key_vault_id                   = module.cognitive_service.key_vault_id
   app_insights_key               = module.monitoring.instrumentation_key
   subnet_id                      = module.network.subnet_id

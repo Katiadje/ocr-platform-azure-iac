@@ -15,3 +15,8 @@ output "key_vault_id" {
 output "key_vault_uri" {
   value = azurerm_key_vault.main.vault_uri
 }
+
+output "vision_api_key" {
+  value     = azurerm_cognitive_account.vision.primary_access_key
+  sensitive = true
+}
